@@ -10,6 +10,10 @@
 typedef struct {
     char sd_root[PT_PATH_MAX];
     pt_state_t st;
+    int touch_x;
+    int touch_y;
+    bool touching;
+    float slider_3d;
     char status_msg[128];
 } pt_app_t;
 
@@ -20,6 +24,7 @@ static void pt_app_init(pt_app_t *app, const char *sd_root) {
     pt_init(&app->st);
     snprintf(app->status_msg, sizeof(app->status_msg),
              "PADTEST READY: MOVE CIRCLE PAD / TOUCH / PRESS Y FOR PIXEL TEST");
+    pk_log_event(app->sd_root, "padtest", "INFO", app->status_msg);
 }
 
 static void pt_app_step(pt_app_t *app, const pk_input_t *in) {
@@ -37,15 +42,20 @@ static void pt_app_step(pt_app_t *app, const pk_input_t *in) {
     if (in->held & PK_BTN_DDOWN) cy = -120;
 #endif
     pt_record_sample(&app->st, cx, cy, in->held, (in->held == 0));
+    app->touching = in->touching;
+    app->touch_x = in->touch_x;
+    app->touch_y = in->touch_y;
+    app->slider_3d = in->slider_3d;
 
-    if (in->down & PK_BTN_Y) {
+    if (in->down & PK_BTN_Y || (in->touch_just_pressed && in->touch_y >= 26 && in->touch_y <= 56)) {
         app->st.pixel_test_mode = (app->st.pixel_test_mode + 1) % 6;
     }
-    if (in->down & PK_BTN_X) {
+    if (in->down & PK_BTN_X || (in->touch_just_pressed && in->touch_y >= 60 && in->touch_y <= 90)) {
         char out[PT_PATH_MAX + 64];
         if (pt_export_report(app->sd_root, &app->st, out, sizeof(out))) {
             snprintf(app->status_msg, sizeof(app->status_msg),
                      "SAVED REPORT: 3DS/PADTEST/HARDWARE_REPORT.JSON");
+            pk_log_event(app->sd_root, "padtest", "INFO", app->status_msg);
         }
     }
 }
@@ -103,9 +113,28 @@ static void pt_app_render(const pt_app_t *app) {
                  "Y: CYCLE DEAD-PIXEL SCREEN TEST");
     pk_draw_text(22, 66, 0.52f, PK_RGBA8(130, 235, 255, 255),
                  "X: EXPORT HARDWARE_REPORT.JSON");
-    snprintf(line, sizeof(line), "3D SLIDER: %.0f%%  |  SAMPLES: %u",
-             0.0f, (unsigned)app->st.sample_count);
-    pk_draw_text(22, 106, 0.48f, PK_RGBA8(200, 215, 235, 255), line);
+    snprintf(line, sizeof(line), "3D SLIDER: %.0f%%  |  TOUCH: %s (%d,%d)",
+             app->slider_3d * 100.0f,
+             app->touching ? "DOWN" : "IDLE",
+             app->touch_x, app->touch_y);
+    pk_draw_text(22, 100, 0.45f, PK_RGBA8(200, 215, 235, 255), line);
+
+    /* 12-Button Matrix Test Grid (lights up green once each button has been pressed) */
+    static const char *const k_btn_names[10] = {
+        "A", "B", "SEL", "STR", "R-D", "L-D", "U-D", "D-D", "R", "L"
+    };
+    for (int b = 0; b < 10; b++) {
+        float bx = 22.0f + (float)(b % 5) * 56.0f;
+        float by = 124.0f + (float)(b / 5) * 24.0f;
+        bool seen = (app->st.buttons_tested_mask & (1u << b)) != 0;
+        pk_draw_rect(bx, by, 50.0f, 20.0f,
+                     seen ? PK_RGBA8(42, 145, 92, 255) : PK_RGBA8(36, 42, 64, 255));
+        pk_draw_text(bx + 8.0f, by + 5.0f, 0.42f, PK_RGBA8(255, 255, 255, 255), k_btn_names[b]);
+    }
+    if (app->touching) {
+        pk_draw_rect((float)(app->touch_x - 3), (float)(app->touch_y - 3), 7.0f, 7.0f,
+                     PK_RGBA8(255, 225, 80, 255));
+    }
     pk_draw_text(22, 178, 0.48f, PK_RGBA8(165, 185, 210, 255),
                  "PRESS START TO EXIT");
     pk_render_end_frame();

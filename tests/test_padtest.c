@@ -32,6 +32,14 @@ int main(void) {
     struct stat sb;
     assert(stat(report_path, &sb) == 0 && sb.st_size > 40);
 
+    /* Fail-the-Fail negative assertions */
+    assert(pt_export_report(NULL, &st, NULL, 0) == false);
+    assert(pt_export_report("build/test_sd", NULL, NULL, 0) == false);
+    pt_record_sample(NULL, 10, 10, 0, true);
+    /* Extreme out-of-range stick coordinates must clamp drift_pct to <= 100.0f */
+    pt_record_sample(&st, 999, 999, 0, true);
+    assert(st.drift_pct == 100.0f);
+
     printf("PASS: test_padtest all drift calculation, min/max excursion, and JSON report checks succeeded.\n");
     return 0;
 }
