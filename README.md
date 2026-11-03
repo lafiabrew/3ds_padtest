@@ -6,6 +6,10 @@
   <img src="docs/banner.png" width="256" height="128" alt="3ds_padtest 3DS banner" />
 </p>
 
+<p align="center">
+  <img src="docs/screenshot.png" width="360" alt="3ds_padtest dual-screen 3DS preview" />
+</p>
+
 > **Stick Drift & Screen Tester (`CTR-P-PADT`, UniqueId `0x0D3E7`)** — Part of the [**lafiabrew**](https://github.com/orgs/lafiabrew/repositories) Nintendo 3DS Homebrew Suite (companion hub: [`lafiabrew/3ds_hub`](https://github.com/lafiabrew/3ds_hub)).
 
 Nintendo 3DS Circle Pad center-bias & drift % analyzer, min/max excursion tracker, 10-button test matrix, 3D slider & stylus touch verifier, dead-pixel screen cycler, and JSON report exporter.
